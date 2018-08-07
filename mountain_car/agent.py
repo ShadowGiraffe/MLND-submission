@@ -6,6 +6,8 @@ import numpy as np
 import random
 
 
+# TODO(peizhao): Merge action into second hidden layer.
+# Paper: https://arxiv.org/abs/1509.02971
 class DDPG():
     """Reinforcement Learning agent that learns using DDPG."""
     def __init__(self, task):
@@ -43,19 +45,34 @@ class DDPG():
         self.tau = 0.001  # for soft update of target parameters
         
         # Score related variables
-        self.reward = 0.0
+        self.best_score = -np.inf
+        self.score = 0.0
 
     def reset_episode(self):
-        self.reward = 0.0
+        self.score = 0.0
         self.noise.reset()
         state = self.task.reset()
         self.last_state = state
         return state
+    
+    def save_model(self):
+        self.critic_local.model.save_weights("critic_local.hdf5")
+        self.critic_target.model.save_weights("critic_target.hdf5")
+        self.actor_local.model.save_weights("actor_local.hdf5")
+        self.actor_target.model.save_weights("actor_target.hdf5")
+        
+    def load_model(self):
+        self.critic_local.model.load_weights("critic_local.hdf5")
+        self.critic_target.model.load_weights("critic_target.hdf5")
+        self.actor_local.model.load_weights("actor_local.hdf5")
+        self.actor_target.model.load_weights("actor_target.hdf5")
 
     def step(self, action, reward, next_state, done):
          # Save experience / reward
         self.memory.add(self.last_state, action, reward, next_state, done)
-        self.reward += reward
+        self.score += reward
+        if done:
+            self.best_score = max(self.best_score, self.score)
 
         # Learn, if enough samples are available in memory
         if len(self.memory) > self.batch_size:
@@ -138,8 +155,12 @@ class Actor:
         states = layers.Input(shape=(self.state_size,), name='states')
 
         # Add hidden layers
-        net = layers.Dense(units=400, activation='relu')(states)
-        net = layers.Dense(units=300, activation='relu')(net)
+        net = layers.Dense(units=400)(states)
+#         net = layers.BatchNormalization()(net)
+        net = layers.Activation('relu')(net)
+        net = layers.Dense(units=300)(net)
+#         net = layers.BatchNormalization()(net)
+        net = layers.Activation('relu')(net)
 
         # Try different layer sizes, activations, add batch normalization, regularizers, etc.
 
@@ -149,7 +170,8 @@ class Actor:
             activation='tanh',
             kernel_initializer=initializers.RandomUniform(
                 minval=-0.003, maxval=0.003, seed=None),
-            name='raw_actions')(net)
+            name='raw_actions'
+        )(net)
 
         # Scale [0, 1] output for each action dimension to proper range
         actions = layers.Lambda(lambda x: (x * self.action_range) + self.action_low,
@@ -199,14 +221,20 @@ class Critic:
         states = layers.Input(shape=(self.state_size,), name='states')
         actions = layers.Input(shape=(self.action_size,), name='actions')
 
-        # Add first hidden layer
-        net_states = layers.Dense(units=400, activation='relu')(states)
-
+        # Add 1st hidden layer for state pathway
+        net_states = layers.Dense(units=400)(states)
+#         net_states = layers.BatchNormalization()(net_states)
+        net_states = layers.Activation('relu')(net_states)
+        
         # Combine state and action pathways
         net = layers.Add()([net_states, actions])
         
-        # Add second hidden layer
-        net = layers.Dense(units=300, activation='relu')(net)
+        # Add 2nd hidden layer
+        net = layers.Dense(units=300)(net)
+#         net = layers.BatchNormalization()(net)
+        net = layers.Activation('relu')(net)
+               
+        # Try different layer sizes, activations, add batch normalization, regularizers, etc.
 
         # Add more layers to the combined network if needed
 
@@ -215,7 +243,8 @@ class Critic:
             units=1, name='q_values',
             kernel_regularizer=regularizers.l2(self.l2),
             kernel_initializer=initializers.RandomUniform(
-                minval=-0.003, maxval=0.003, seed=None))(net)
+                minval=-0.003, maxval=0.003, seed=None)
+        )(net)
 
         # Create Keras model
         self.model = models.Model(inputs=[states, actions], outputs=Q_values)
