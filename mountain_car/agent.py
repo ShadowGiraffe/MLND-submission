@@ -98,7 +98,6 @@ class DDPG():
         next_states = np.vstack([e.next_state for e in experiences if e is not None])
 
         # Get predicted next-state actions and Q values from target models
-        #     Q_targets_next = critic_target(next_state, actor_target(next_state))
         actions_next = self.actor_target.model.predict_on_batch(next_states)
         Q_targets_next = self.critic_target.model.predict_on_batch([next_states, actions_next])
 
@@ -155,12 +154,8 @@ class Actor:
         states = layers.Input(shape=(self.state_size,), name='states')
 
         # Add hidden layers
-        net = layers.Dense(units=400)(states)
-#         net = layers.BatchNormalization()(net)
-        net = layers.Activation('relu')(net)
-        net = layers.Dense(units=300)(net)
-#         net = layers.BatchNormalization()(net)
-        net = layers.Activation('relu')(net)
+        net = layers.Dense(units=400, activation='relu')(states)
+        net = layers.Dense(units=300, activation='relu')(net)
 
         # Try different layer sizes, activations, add batch normalization, regularizers, etc.
 
@@ -221,17 +216,15 @@ class Critic:
         states = layers.Input(shape=(self.state_size,), name='states')
         actions = layers.Input(shape=(self.action_size,), name='actions')
 
-        # Add 1st hidden layer for state pathway
-        net_states = layers.Dense(units=400)(states)
-#         net_states = layers.BatchNormalization()(net_states)
-        net_states = layers.Activation('relu')(net_states)
+        # Add hidden layer(s) for state pathway
+        net_states = layers.Dense(units=400, activation='relu')(states)
+        net_states = layers.Dense(units=300)(net_states)
+        
+        # Add hidden layer(s) for action pathway
+        net_actions = layers.Dense(units=300)(actions)
         
         # Combine state and action pathways
-        net = layers.Add()([net_states, actions])
-        
-        # Add 2nd hidden layer
-        net = layers.Dense(units=300)(net)
-#         net = layers.BatchNormalization()(net)
+        net = layers.Add()([net_states, net_actions])
         net = layers.Activation('relu')(net)
                
         # Try different layer sizes, activations, add batch normalization, regularizers, etc.
