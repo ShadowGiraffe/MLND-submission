@@ -19,7 +19,7 @@ class Actor:
         self.action_size = action_size
         self.action_low = action_low
         self.action_high = action_high
-        self.action_range = self.action_high - self.action_low
+        self.action_range = action_high - action_low
 
         # Initialize any other variables here
 
@@ -28,23 +28,22 @@ class Actor:
     def build_model(self):
         """
         Build an actor (policy) network that maps states -> actions.
-        * In the MountainCar scenario there is no need to ajust the
-          action range because the tanh function output maps [-1,1]
         """
         # Define input layer (states)
         states = layers.Input(shape=(self.state_size,), name='states')
 
-        
+        # Add hidden layers
         net = layers.Dense(units=40, activation='relu')(states)
-        # net2 = layers.Dense(units=20, activation='relu')(states)
-
-        # net = layers.Add()([net1, net2])
-
         net = layers.Dense(units=20, activation='relu')(net)
 
-        # final output layer
+        # Add final output layer
         actions = layers.Dense(units=self.action_size, activation='tanh',
                                name='raw_actions')(net)
+
+        # Scale [-1, 1] output for each action dimension to proper range
+        actions = layers.Lambda(
+            lambda x: ((x + 1) * self.action_range / 2) + self.action_low,
+            name='actions')(actions)
 
         # Create Keras model
         self.model = models.Model(inputs=states, outputs=actions)

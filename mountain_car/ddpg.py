@@ -12,8 +12,8 @@ class DDPG():
         # self.task = task
         self.state_size = 2
         self.action_size = 1
-        self.action_low = -1
-        self.action_high = 1
+        self.action_low = np.array([-1])
+        self.action_high = np.array([1])
 
         # Actor (Policy) Model
         self.actor_local = Actor(
@@ -71,9 +71,9 @@ class DDPG():
         state = np.reshape(state, [-1, self.state_size])
         pure_action = self.actor_local.model.predict(state)[0]
         noise = self.noise.sample()
-        action = np.clip(pure_action*.2 + noise, -1, 1)
-        # add some noise for exploration
-        return list(action), pure_action
+        action = np.clip(pure_action*.2 + noise,
+                         self.action_low, self.action_high)
+        return action, pure_action
 
     def learn(self, experiences):
         """

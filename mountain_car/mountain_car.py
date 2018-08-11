@@ -192,12 +192,13 @@ class MountainCar():
 
     def print_epoch(self, vals, verbose):
         if verbose == 1:
-            pstr = ('Epoch:{:4}\nTrain: reward:{: 6.1f} steps:{:6.0f} hist:'
-                    '{: 6.1f} action/std:{: .3f}/{: .3f} \nTest:  reward:'
-                    '{: 6.1f} steps:{:6.0f} hist:{: 6.1f} action/std:{: .3f}'
-                    '/{: .3f}\n'.format(*vals))
+            pstr = ('Epoch:{:4}\n'
+                    'Train: reward:{:6.1f}\tsteps:{:6.0f}\thist:{:6.1f}\t'
+                    'action/std:{:.3f}/{:.3f}\n'
+                    'Test:  reward:{:6.1f}\tsteps:{:6.0f}\thist:{:6.1f}\t'
+                    'action/std:{:.3f}/{:.3f}\n'.format(*vals))
         elif verbose == 0:
-            pstr = ('Epoch {:4} train reward:{: 6.1f} test reward:{: 6.1f}'
+            pstr = ('Epoch {:4}\ttrain reward:{:6.1f}\ttest reward:{:6.1f}'
                     '\r'.format(*vals[[0, 1, 6]]))
         elif verbose == -1:
             return
@@ -206,5 +207,5 @@ class MountainCar():
 
 if __name__ == '__main__':
     print('Running learner directly')
-    Learner = MountainCar()
-    Learner.run_model(max_epochs=20, n_solved=5, plot_Q=False)
+    learner = MountainCar()
+    learner.run_model(max_epochs=20, n_solved=5, plot_Q=False)

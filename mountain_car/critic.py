@@ -30,13 +30,11 @@ class Critic:
         states = layers.Input(shape=(self.state_size,), name='states')
         actions = layers.Input(shape=(self.action_size,), name='actions')
 
-        # Add hidden layer(s) for state pathway
+        # Add hidden layer(s)
         net = layers.Dense(units=20, activation='relu')(states)
         net = layers.Add()([net, actions])
         net = layers.Dense(units=20, activation='relu')(net)
-
         lin_states = layers.Dense(units=20, activation='relu')(states)
-
         net = layers.Add()([net, lin_states])
 
         # Add final output layer to prduce action values (Q values)
