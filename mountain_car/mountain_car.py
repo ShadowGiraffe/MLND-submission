@@ -33,10 +33,10 @@ class MountainCar():
         plot_range = np.arange(-1, 1 + state_step, state_step)
         action_range = np.arange(-1, 1 + action_step, action_step)
         shape = plot_range.shape[0]
-        matrix_Q = np.ones((shape, shape))
-        matrix_mQ = np.ones((shape, shape))
-        matrix_sQ = np.ones((shape, shape))
-        matrix_A = np.ones((shape, shape))
+        matrix_Q = np.zeros((shape, shape))
+        matrix_mQ = np.zeros((shape, shape))
+        matrix_sQ = np.zeros((shape, shape))
+        matrix_A = np.zeros((shape, shape))
         for i in range(shape):
             for j in range(shape):
                 pos = plot_range[j]
@@ -45,8 +45,8 @@ class MountainCar():
                 Q_list = []
                 for a in action_range:
                     action = np.array(a).reshape(-1, 1)
-                    Q_list.append(self.agent.critic_local.model.predict(
-                                  [state, action]))
+                    Q_list.append(
+                        self.agent.critic_local.model.predict([state, action]))
                 matrix_Q[i][j] = np.max(Q_list)
                 matrix_sQ[i][j] = np.std(Q_list)
                 matrix_mQ[i][j] = action_range[np.argmax(Q_list)]
@@ -149,7 +149,7 @@ class MountainCar():
             (train_reward, train_done, train_action_mean, train_action_std,
              train_steps) = self.run_epoch()
             (test_reward, test_done, test_action_mean, test_action_std,
-             test_steps) = self.run_epoch(render=True, training=False)
+             test_steps) = self.run_epoch(training=False)
 
             train_hist.append([train_reward, train_steps])
             test_hist.append([test_reward, test_steps])
@@ -166,21 +166,20 @@ class MountainCar():
                 test_running = np.mean([r for r, s in test_hist])
 
             print('Epoch:{:4}\n'
-                  'Train: reward:{:6.1f}\tdone:{}\tsteps:{:6.0f}\t'
+                  'Train: reward:{:6.1f}\tsteps:{:6.0f}\t'
                   'hist:{:6.1f}\taction/std:{:.3f}/{:.3f}\n'
-                  'Test:  reward:{:6.1f}\tdone:{}\tsteps:{:6.0f}\t'
+                  'Test:  reward:{:6.1f}\tsteps:{:6.0f}\t'
                   'hist:{:6.1f}\taction/std:{:.3f}/{:.3f}\n'
-                  .format(epoch, train_reward, train_done, train_steps,
+                  .format(epoch, train_reward, train_steps,
                           train_running, train_action_mean, train_action_std,
-                          test_reward, test_done, test_steps, test_running,
+                          test_reward, test_steps, test_running,
                           test_action_mean, test_action_std))
 
             if test_running > r_solved and epoch > n_solved:
-                    print('\nSolved! Average of {:4.1f} from episode {:3d}'
-                          ' to {:3d}'.format(test_running, epoch -
-                                             n_solved + 1, epoch))
-                    solved = epoch
-                    break
+                print('\nSolved! Average of {:4.1f} from episode {} to {}'
+                      .format(test_running, epoch - n_solved + 1, epoch))
+                solved = epoch
+                break
 
         if plot_Q:
             self.plot_Q()
@@ -189,4 +188,4 @@ class MountainCar():
 
 if __name__ == '__main__':
     learner = MountainCar()
-    learner.run_model(max_epochs=10, n_solved=3, plot_Q=False)
+    learner.run_model(max_epochs=10, n_solved=3, plot_Q=True)
