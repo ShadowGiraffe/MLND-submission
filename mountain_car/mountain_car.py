@@ -5,8 +5,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"  # forces tensorflow to use CPU
-
 
 class MountainCar():
 
@@ -15,8 +13,7 @@ class MountainCar():
         self.agent = DDPG()
 
     def new_env(self):
-        gym.logger.set_level(40)  # to surpress warnings
-        return gym.make('MountainCarContinuous-v0').unwrapped
+        return gym.make('MountainCarContinuous-v0')
 
     def preprocess_state(self, state):
         # mapping the state values to [-1,1]
@@ -93,13 +90,14 @@ class MountainCar():
 
         plt.show()
 
-    def run_epoch(self, max_steps, render=False, training=True):
+    def run_epoch(self, render=False, training=True):
         state = self.preprocess_state(self.env.reset())
         self.agent.reset_episode(state)
         actions_list = []
         total_reward = 0
         steps = 0
-        while steps < max_steps:
+        done = False
+        while not done:
             steps += 1
             noisy_action, pure_action = self.agent.act(state)
 
@@ -131,20 +129,16 @@ class MountainCar():
 
         return total_reward, done, action_mean, action_std, steps
 
-    def run_model(self, max_epochs=100, n_solved=1, r_solved=90,
-                  max_steps=1000, plot_Q=False, verbose=1):
+    def run_model(self, max_epochs=100, n_solved=1, r_solved=90, plot_Q=False):
         """
         Train the learner
 
         Params
             ======
                 max_epochs (int): Maximum number of training episodes
-                max_steps (int): Maximum steps in each episode
                 r_solved (int): Minimum reward value to consider episode solved
                 n_solved (int): Targed number of solved episodes before break
                 plot_Q (bool): If true will plot state action values heatmaps
-                verbose (int): How much information each epoch will print,
-                  possible values are 1,0 and-1 in order of verbosity
         """
 
         solved = False
@@ -152,11 +146,10 @@ class MountainCar():
         test_hist = []
 
         for epoch in range(1, max_epochs+1):
-            train_reward, train_done, train_action_mean, train_action_std, \
-                train_steps = self.run_epoch(max_steps=max_steps)
-            test_reward, test_done, test_action_mean, test_action_std, \
-                test_steps = self.run_epoch(max_steps=max_steps,
-                                            training=False)
+            (train_reward, train_done, train_action_mean, train_action_std,
+             train_steps) = self.run_epoch()
+            (test_reward, test_done, test_action_mean, test_action_std,
+             test_steps) = self.run_epoch(render=True, training=False)
 
             train_hist.append([train_reward, train_steps])
             test_hist.append([test_reward, test_steps])
@@ -172,13 +165,16 @@ class MountainCar():
                 train_running = np.mean([r for r, s in train_hist])
                 test_running = np.mean([r for r, s in test_hist])
 
-            print_vals = np.array([epoch, train_reward, train_steps,
-                                   train_running, train_action_mean,
-                                   train_action_std, test_reward, test_steps,
-                                   test_running, test_action_mean,
-                                   test_action_std])
+            print('Epoch:{:4}\n'
+                  'Train: reward:{:6.1f}\tdone:{}\tsteps:{:6.0f}\t'
+                  'hist:{:6.1f}\taction/std:{:.3f}/{:.3f}\n'
+                  'Test:  reward:{:6.1f}\tdone:{}\tsteps:{:6.0f}\t'
+                  'hist:{:6.1f}\taction/std:{:.3f}/{:.3f}\n'
+                  .format(epoch, train_reward, train_done, train_steps,
+                          train_running, train_action_mean, train_action_std,
+                          test_reward, test_done, test_steps, test_running,
+                          test_action_mean, test_action_std))
 
-            self.print_epoch(print_vals, verbose)
             if test_running > r_solved and epoch > n_solved:
                     print('\nSolved! Average of {:4.1f} from episode {:3d}'
                           ' to {:3d}'.format(test_running, epoch -
@@ -190,22 +186,7 @@ class MountainCar():
             self.plot_Q()
         return train_hist, test_hist, solved
 
-    def print_epoch(self, vals, verbose):
-        if verbose == 1:
-            pstr = ('Epoch:{:4}\n'
-                    'Train: reward:{:6.1f}\tsteps:{:6.0f}\thist:{:6.1f}\t'
-                    'action/std:{:.3f}/{:.3f}\n'
-                    'Test:  reward:{:6.1f}\tsteps:{:6.0f}\thist:{:6.1f}\t'
-                    'action/std:{:.3f}/{:.3f}\n'.format(*vals))
-        elif verbose == 0:
-            pstr = ('Epoch {:4}\ttrain reward:{:6.1f}\ttest reward:{:6.1f}'
-                    '\r'.format(*vals[[0, 1, 6]]))
-        elif verbose == -1:
-            return
-        print(pstr)
-
 
 if __name__ == '__main__':
-    print('Running learner directly')
     learner = MountainCar()
-    learner.run_model(max_epochs=20, n_solved=5, plot_Q=False)
+    learner.run_model(max_epochs=10, n_solved=3, plot_Q=False)
