@@ -1,7 +1,7 @@
 from actor import Actor
 from critic import Critic
 from replay_buffer import ReplayBuffer
-from oun_noise import OUNoise
+from ounoise import OUNoise
 import numpy as np
 
 

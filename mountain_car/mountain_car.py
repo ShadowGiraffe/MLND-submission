@@ -7,6 +7,8 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
 class MountainCar():
+    #TODO(peizhao): refactor plot_Q().
+    #TODO(peizhao): develop new methods that help debuging.
 
     def __init__(self):
         self.agent = DDPG(gym.make('MountainCarContinuous-v0'))
