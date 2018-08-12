@@ -8,8 +8,7 @@ class Actor:
     def __init__(self, state_size, action_size, action_low, action_high):
         """Initialize parameters and build model.
 
-        Params
-        ======
+        Args:
             state_size (int): Dimension of each state
             action_size (int): Dimension of each action
             action_low (array): Min value of each action dimension
@@ -26,9 +25,7 @@ class Actor:
         self.build_model()
 
     def build_model(self):
-        """
-        Build an actor (policy) network that maps states -> actions.
-        """
+        """Build an actor (policy) network that maps states -> actions."""
         # Define input layer (states)
         states = layers.Input(shape=(self.state_size,), name='states')
 

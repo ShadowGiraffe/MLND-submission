@@ -9,8 +9,7 @@ class Critic:
         """
         Initialize parameters and build model.
 
-        Params
-        ======
+        Args:
             state_size (int): Dimension of each state
             action_size (int): Dimension of each action
         """
@@ -22,9 +21,7 @@ class Critic:
         self.build_model()
 
     def build_model(self):
-        """
-        Build a critic (value) network that maps
-        (state, action) pairs -> Q-values.
+        """Build a critic network that maps (state, action) pairs -> Q-values.
         """
         # Define input layers
         states = layers.Input(shape=(self.state_size,), name='states')
