@@ -163,8 +163,8 @@ class Actor:
         # Add final output layer
         actions = layers.Dense(
             units=self.action_size, activation='tanh',
-            kernel_initializer=initializers.RandomUniform(minval=-3e-5,
-                                                          maxval=3e-5),
+            kernel_initializer=initializers.RandomUniform(minval=-1e-5,
+                                                          maxval=1e-5),
             name='raw_actions')(net)
 
         # Scale [-1, 1] output for each action dimension to proper range
@@ -229,8 +229,8 @@ class Critic:
         # Add final output layer to prduce action values (Q values)
         Q_values = layers.Dense(
             units=1,
-            kernel_initializer=initializers.RandomUniform(
-                minval=-1e-5, maxval=1e-5),
+            kernel_initializer=initializers.RandomUniform(minval=-1e-5,
+                                                          maxval=1e-5),
             name='q_values')(net)
 
         # Create Keras model

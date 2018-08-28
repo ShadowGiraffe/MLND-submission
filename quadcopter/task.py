@@ -30,8 +30,7 @@ class Task():
     def get_reward(self):
         """Uses vertical velocity to return reward."""
         reward = np.clip(self.sim.v[2]*0.2, -1, 1)
-        # Maybe restrain x-y to a circle.
-        if (np.sum(np.abs(self.sim.pose[:2] - self.target_pos[:2])) > 10 or
+        if (np.sum(np.exp2(self.sim.pose[:2] - self.target_pos[:2])) > 25 or
             self.sim.pose[2] < 1):
             self.done = True
             reward = -100
