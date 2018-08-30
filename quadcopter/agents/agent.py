@@ -16,14 +16,11 @@ class DDPG():
         self.action_size = task.action_size
         self.action_low = task.action_low
         self.action_high = task.action_high
+        self.action_range = self.action_high - self.action_low
 
         # Actor (Policy) Model
-        self.actor_local = Actor(
-            self.state_size, self.action_size, self.action_low,
-            self.action_high)
-        self.actor_target = Actor(
-            self.state_size, self.action_size, self.action_low,
-            self.action_high)
+        self.actor_local = Actor(self.state_size, self.action_size)
+        self.actor_target = Actor(self.state_size, self.action_size)
 
         # Critic (Value) Model
         self.critic_local = Critic(self.state_size, self.action_size)
@@ -37,8 +34,8 @@ class DDPG():
 
         # Noise process
         self.exploration_mu = 0
-        self.exploration_theta = 0.05
-        self.exploration_sigma = 0.25
+        self.exploration_theta = 0.15
+        self.exploration_sigma = 0.2
         self.noise = OUNoise(self.action_size, self.exploration_mu,
                              self.exploration_theta, self.exploration_sigma)
 
@@ -49,8 +46,8 @@ class DDPG():
 
         # Algorithm parameters
         self.gamma = 0.999  # discount factor
-        self.tau_actor = 0.1  # for soft update of target parameters
-        self.tau_critic = 0.1
+        self.tau_actor = 0.01  # for soft update of target parameters
+        self.tau_critic = 0.01
 
         # Scores
         self.score = 0
@@ -71,12 +68,22 @@ class DDPG():
             self.learn(experiences)
 
     def act(self, state):
-        """Return actions for given state(s) as per current policy."""
+        """Return actions for given state(s) as per current policy.
+
+        Args:
+            state (array): A state array.
+
+        Returns:
+            A tuple of (noisy_action, pure_action).
+        """
         state = np.reshape(state, [-1, self.state_size])
-        pure_action = self.actor_local.model.predict(state)[0]
-        noisy_action = np.clip(pure_action + self.noise.sample(),
-                               self.action_low, self.action_high)
-        return noisy_action, pure_action
+        pure_normalized_action = self.actor_local.model.predict(state)[0]
+        noisy_normalized_action = np.clip(
+            pure_normalized_action + self.noise.sample(), -1, 1)
+        # Scale [-1, 1] output for each action dimension to proper range
+        return tuple(
+            (x + 1) * self.action_range / 2 + self.action_low
+            for x in (noisy_normalized_action, pure_normalized_action))
 
     def learn(self, experiences):
         """Update policy and value parameters using given batch of experiences.
@@ -131,20 +138,15 @@ class DDPG():
 class Actor:
     """Actor (Policy) Model."""
 
-    def __init__(self, state_size, action_size, action_low, action_high):
+    def __init__(self, state_size, action_size):
         """Initialize parameters and build model.
 
         Args:
             state_size (int): Dimension of each state
             action_size (int): Dimension of each action
-            action_low (array): Min value of each action dimension
-            action_high (array): Max value of each action dimension
         """
         self.state_size = state_size
         self.action_size = action_size
-        self.action_low = action_low
-        self.action_high = action_high
-        self.action_range = action_high - action_low
 
         # Initialize any other variables here
 
@@ -156,21 +158,17 @@ class Actor:
         states = layers.Input(shape=(self.state_size,), name='states')
 
         # Add hidden layers
-        net = layers.Dense(units=40, activation='relu')(states)
-        net = layers.Dense(units=20, activation='relu')(net)
-        net = layers.Dense(units=40, activation='relu')(net)
+        net = layers.Dense(units=32, activation='relu')(states)
+        net = layers.Dense(units=64, activation='relu')(net)
+        net = layers.Dense(units=32, activation='relu')(net)
 
         # Add final output layer
         actions = layers.Dense(
-            units=self.action_size, activation='tanh',
-            kernel_initializer=initializers.RandomUniform(minval=-1e-5,
-                                                          maxval=1e-5),
-            name='raw_actions')(net)
-
-        # Scale [-1, 1] output for each action dimension to proper range
-        actions = layers.Lambda(
-            lambda x: ((x + 1) * self.action_range / 2) + self.action_low,
-            name='actions')(actions)
+            units=self.action_size,
+            activation='tanh',
+            kernel_initializer=initializers.RandomUniform(
+                minval=-3e-3, maxval=3e-3),
+            name='actions')(net)
 
         # Create Keras model
         self.model = models.Model(inputs=states, outputs=actions)
@@ -215,22 +213,22 @@ class Critic:
         actions = layers.Input(shape=(self.action_size,), name='actions')
 
         # Add hidden layer(s) for state pathway
-        net_states = layers.Dense(units=40, activation='relu')(states)
-        net_states = layers.Dense(units=20, activation='relu')(net_states)
+        net_states = layers.Dense(units=32, activation='relu')(states)
+        net_states = layers.Dense(units=64, activation='relu')(net_states)
 
         # Add hidden layer(s) for action pathway
-        net_actions = layers.Dense(units=40, activation='relu')(actions)
-        net_actions = layers.Dense(units=20, activation='relu')(net_actions)
+        net_actions = layers.Dense(units=32, activation='relu')(actions)
+        net_actions = layers.Dense(units=64, activation='relu')(net_actions)
 
         # Combine state and action pathways
         net = layers.Add()([net_states, net_actions])
-        net = layers.Dense(units=40, activation='relu')(net)
+        net = layers.Activation('relu')(net)
 
         # Add final output layer to prduce action values (Q values)
         Q_values = layers.Dense(
             units=1,
-            kernel_initializer=initializers.RandomUniform(minval=-1e-5,
-                                                          maxval=1e-5),
+            kernel_initializer=initializers.RandomUniform(
+                minval=-3e-4, maxval=3e-4),
             name='q_values')(net)
 
         # Create Keras model
@@ -283,7 +281,7 @@ class ReplayBuffer:
 class OUNoise:
     """Ornstein-Uhlenbeck process."""
 
-    def __init__(self, size=1, mu=0, theta=0.05, sigma=0.25):
+    def __init__(self, size, mu, theta, sigma):
         """Initialize parameters and noise process."""
         self.mu = mu * np.ones(size)
         self.theta = theta
