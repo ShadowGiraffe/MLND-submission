@@ -8,3 +8,5 @@ This repo includes implementations of multiple ML algorithms:
 * CNN for classifying dog breeds
 * DDPG for playing the mountain car
 * DDPG for flying quadcopter
+* PyTorch for sentiment analysis
+* PyTorch for plagiarism detection
